@@ -2,10 +2,11 @@
 #include <ESP8266WiFi.h>
 #include "Gsender.h"
 
-const char* SSID = "Franco";
-const char* PASS = "Fiwoldiois01$";
+const char* SSID = "NETGEAR";
+const char* PASS = "";
 char server[] = "smtp.gmail.com";
 String messaggio;
+WiFiServer serverhttp(80);
 
 WiFiClient client;
 
@@ -39,6 +40,26 @@ void setup(){
   Serial.print("IP sessione: ");
   Serial.println(WiFi.localIP());
   //FINE CONNESSIONE
+    String ip = WiFi.localIP().toString();
+     messaggio="IP sessione: "+ip;
+    Gsender *gsender = Gsender::Instance();    // Getting pointer to class instance
+    String subject = "INIZIO SESSIONE";
+    if(gsender->Subject(subject)->Send("iz4tow@gmail.com", messaggio)) {
+        Serial.println("Message send.");
+    } else {
+        Serial.print("Error sending message: ");
+        Serial.println(gsender->getError());
+    }
+
+    ///AVVIO SERVER HTTP
+      serverhttp.begin();
+  Serial.println("Server started");
+ 
+  // Print the IP address
+  Serial.print("Use this URL to connect: ");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/");
 
 // PIN 9 al Relè - IN1
 //	pinMode(8, OUTPUT);
@@ -47,6 +68,7 @@ Serial.println("Serra Autonoma di Franco Avino");
   
 // Avvio sensore DHT11  
 	dht.begin();
+
 }
 
 
@@ -104,6 +126,41 @@ if (contatore>3600){
         Serial.println(gsender->getError());
     }
 }
+//////////////////////////////////////////////////PARTE HTTP SERVER
+  // Check if a client has connected
+  WiFiClient client = serverhttp.available();
+  if (!client) {
+    return;
+  }
+ 
+  // Wait until the client sends some data
+  Serial.println("new client");
+  while(!client.available()){
+    delay(1);
+  }
+ 
+  // Read the first line of the request
+  String request = client.readStringUntil('\r');
+  Serial.println(request);
+  client.flush();
+
+
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println(""); //  do not forget this one
+  client.println("<!DOCTYPE HTML>");
+  client.println("<html>");
+ 
+
+  client.println("Temperatura Ambiente: "+String(temperatura)+"&#176;C");
+  client.println("<br>Umidit&agrave; Ambiente :"+String(umidita)+"%");
+  client.println("<br>Umidit&agrave; Terreno: "+String(umdtrr)+"%");  
+  client.println("</html>");
+ 
+  delay(1);
+  Serial.println("Client disonnected");
+  Serial.println("");
 }
 
 
