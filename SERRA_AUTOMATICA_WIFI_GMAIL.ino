@@ -31,6 +31,8 @@ byte ret=0;
 #define DHTTYPE DHT11   // DHT 11
 DHT dht(DHTPIN, DHTTYPE);
 
+#define POMPA 5     // Sensore collegato al PIN 5 (5 è 1...)
+
 void setup(){
 	//CONNESSIONE WIFI
 	Serial.begin(115200);
@@ -62,7 +64,7 @@ void setup(){
   
   //MAIL INIZIO SESSIONE
 	String ip = WiFi.localIP().toString();
-	messaggio="IP sessione: "+ip+"<br>Ora Attuale: "+String(hour()+2)+":"+String(minute())+":"+String(second());
+	messaggio="IP sessione: http://"+ip+"<br>Ora Attuale: "+String(hour()+2)+":"+String(minute())+":"+String(second());
     Gsender *gsender = Gsender::Instance();    // Getting pointer to class instance
     String subject = "INIZIO SESSIONE";
     if(gsender->Subject(subject)->Send("iz4tow@gmail.com", messaggio)){
@@ -82,8 +84,9 @@ void setup(){
 	Serial.print(WiFi.localIP());
 	Serial.println("/");
 
-// PIN 8 al Relè - IN1
-	pinMode(16, OUTPUT);
+// PIN POMPA
+	pinMode(POMPA, OUTPUT);
+	digitalWrite(POMPA,HIGH); // Spegni Relè 1
 
 	Serial.println("Serra Autonoma di Franco Avino");
   
@@ -116,14 +119,19 @@ void loop(){
 	if (umdtrr <= valore_limite){
 		innaffia(umdtrr,umidita,temperatura);
 	}else{
-		digitalWrite(16,LOW); // Spegni Relè 1
+		digitalWrite(POMPA,HIGH); // Spegni Relè 1
 	}
 
 
-	if (String(minute())=="00"){ //ogni ora invia il riepilogo
+	if (minute()==0){ //ogni ora invia il riepilogo
     oggetto=="RIEPILOGO";
 		mail(umdtrr,umidita,temperatura,oggetto);
 	}
+
+ //AGGIORNA ORA OGNI MEZZANOTTE
+  if (hour()==0 and minute()==0){ 
+    ricevintp();
+  }
 	
 //////////////////////////////////////////////////PARTE HTTP SERVER
   // Check if a client has connected
@@ -184,7 +192,7 @@ void mail(int umdtrr,int umidita,int temperatura,String oggetto){
 }
 
 void innaffia(int umdtrr,int umidita,int temperatura){
-  digitalWrite(16,HIGH); // Attiva Relè 1
+  digitalWrite(POMPA,LOW); // Attiva Relè 1
   oggetto="STO INNAFFIANDO";
   mail(umdtrr,umidita,temperatura,oggetto);
   delay(2000);
@@ -246,4 +254,3 @@ void ricevintp(){
   Serial.print(second());
   Serial.println();
 }
-
