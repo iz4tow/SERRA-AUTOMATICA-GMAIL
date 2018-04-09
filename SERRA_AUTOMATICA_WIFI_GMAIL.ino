@@ -4,6 +4,7 @@
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 
+//SETTAGGI PER NTP
 unsigned int localPort = 2390;      // local port to listen for UDP packets NTP
 IPAddress timeServerIP; // time.nist.gov NTP server address
 const char* ntpServerName = "0.it.pool.ntp.org";
@@ -11,13 +12,21 @@ const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of th
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 WiFiUDP udp;
 
+//SETTAGGI WIFI
 const char* SSID = "NETGEAR";
-const char* PASS = "";
+const char* PASS = "fiwoldiois";
+
+// SETTAGGI PER POSTA
 char server[] = "smtp.gmail.com";
 String messaggio;
 String oggetto;
-WiFiServer serverhttp(80);
+int riepilogo=0;
 
+//SETTAGGI PER HTTP SERVER
+WiFiServer serverhttp(80);
+String request;
+String currentLine = "";   
+char c;
 WiFiClient client;
 
   
@@ -41,6 +50,15 @@ void setup(){
 	Serial.println("");
 	Serial.print("Connecting ");
 	Serial.println(SSID);
+
+	//STATIC IP
+	IPAddress staticip(192,168,2,100);
+	IPAddress netmask(255,255,255,0);
+	IPAddress gateway(192,168,2,1);
+	IPAddress dns(8,8,8,8);
+	WiFi.config(staticip,dns,gateway,netmask); 
+	//FINE STATIC IP
+  
 	WiFi.begin(SSID, PASS);
 	while (WiFi.status() != WL_CONNECTED){
 		delay(500);
@@ -58,23 +76,21 @@ void setup(){
 	Serial.print("Local port: ");
 	Serial.println(udp.localPort());
 	// wait to see if a reply is available
-  ricevintp();
-	//delay(10000);
-  
+  //ricevintp();  
   
   //MAIL INIZIO SESSIONE
 	String ip = WiFi.localIP().toString();
 	messaggio="IP sessione: http://"+ip+"<br>Ora Attuale: "+String(hour()+2)+":"+String(minute())+":"+String(second());
     Gsender *gsender = Gsender::Instance();    // Getting pointer to class instance
     String subject = "INIZIO SESSIONE";
-    if(gsender->Subject(subject)->Send("iz4tow@gmail.com", messaggio)){
-        Serial.println("Message send.");
-    } else {
-        Serial.print("Error sending message: ");
-        Serial.println(gsender->getError());
-    }
+   // if(gsender->Subject(subject)->Send("iz4tow@gmail.com", messaggio)){
+     //   Serial.println("Message send.");
+    //} else {
+    //    Serial.print("Error sending message: ");
+    //    Serial.println(gsender->getError());
+   // }
 
-    ///AVVIO SERVER HTTP
+    //AVVIO SERVER HTTP
 	serverhttp.begin();
 	Serial.println("Server started");
 	
@@ -102,20 +118,20 @@ void loop(){
 // Lettura umidità e temperatura del sensore DHT11
 	int umidita = dht.readHumidity();
 	int temperatura = dht.readTemperature();
-	Serial.print("Temperatura ambiente: ");
-	Serial.print(temperatura);
-	Serial.println("°C");
-	Serial.print("Umidità: ");
-	Serial.print(umidita);
-	Serial.println("%");
+	//Serial.print("Temperatura ambiente: ");
+	//Serial.print(temperatura);
+	//Serial.println("°C");
+	//Serial.print("Umidità: ");
+	//Serial.print(umidita);
+	//Serial.println("%");
 	
 // Igrometro
 	int igro = analogRead(A0); // Legge il valore analogico
 	int umdtrr = 0; // Variabile umidità suolo
 	umdtrr = map (igro, 100, 990, 100, 0); // converto il valore analogico in percentuale
-	Serial.print("Umidità del terreno: ");
-	Serial.print(umdtrr);
-	Serial.println("%"); //Stampa a schermo il valore
+//	Serial.print("Umidità del terreno: ");
+//	Serial.print(umdtrr);
+//	Serial.println("%"); //Stampa a schermo il valore
 	if (umdtrr <= valore_limite){
 		innaffia(umdtrr,umidita,temperatura);
 	}else{
@@ -123,54 +139,80 @@ void loop(){
 	}
 
 
-	if (minute()==0){ //ogni ora invia il riepilogo
-    oggetto=="RIEPILOGO";
+	if (minute()==0 and riepilogo==0){ //ogni ora invia il riepilogo
+    oggetto="RIEPILOGO";
 		mail(umdtrr,umidita,temperatura,oggetto);
+    riepilogo=1;
 	}
+    if (minute()==1 and riepilogo==1){ //ogni ora invia il riepilogo
+    riepilogo=0;
+  }
 
  //AGGIORNA ORA OGNI MEZZANOTTE
-  if (hour()==0 and minute()==0){ 
-    ricevintp();
-  }
+  //if (hour()==0 and minute()==0){ 
+    //ricevintp();
+  //}
 	
 //////////////////////////////////////////////////PARTE HTTP SERVER
   // Check if a client has connected
 	WiFiClient client = serverhttp.available();
-	if (!client) {
-		return;
+	if (client) {
+		while (client.connected()){
+		//	Serial.println("new client");
+	// Wait until the client sends some data
+			if(client.available()){
+				char c = client.read();             // read a byte, then
+				Serial.write(c);                    // print it out the serial monitor
+				request += c; //legge la richiesta per carattere
+				if (c == '\n') {                    // if the byte is a newline character
+				// if the current line is blank, you got two newline characters in a row.
+				// that's the end of the client HTTP request, so send a response:
+					if (currentLine.length() == 0) {
+						// Read the first line of the request E RISPONDE - dismesso
+						//request = client.readStringUntil('\r');
+						Serial.println(request);
+						client.flush();
+						if (request.indexOf("/MAIL") != -1)  {
+							Serial.println("PREMUTO MAIL DA WEB");
+							oggetto="MAIL GENERATA VIA WEB";
+							mail(umdtrr,umidita,temperatura,oggetto);
+						}
+						if (request.indexOf("/INNAFFIA") != -1)  {
+							Serial.println("PREMUTO INNAFFIA DA WEB");
+							innaffia(umdtrr,umidita,temperatura);
+						}
+						////////// Return the response
+						client.println("HTTP/1.1 200 OK");
+						client.println("Content-Type: text/html");
+						client.println(""); //  do not forget this one
+						//////////client.println("<html>");
+						//////////client.println("Temperatura Ambiente: "+String(temperatura)+"&#176;C");
+						//////////client.println("<br>Umidit&agrave; Ambiente: "+String(umidita)+"%");
+						//////////client.println("<br>Umidit&agrave; Terreno: "+String(umdtrr)+"%");  
+						//////////client.println("<br><a href=\"/MAIL\"\"><button>MAIL DI RIEPILOGO</button></a>");  
+						//////////client.println("<a href=\"/INNAFFIA\"\"><button>INNAFFIA</button></a>"); 
+						//////////client.println("<br>Ora Aggiornamento: "+String(hour()+2)+":"+String(minute())+":"+String(second()));
+						//////////client.println("</html>");
+            // con una stringa sola invece che tante println è MOLTO più veloce
+						client.println("<!DOCTYPE HTML><html>Temperatura Ambiente: "+String(temperatura)+"&#176;C	<br>Umidit&agrave; Ambiente: "+String(umidita)+"%		<br>Umidit&agrave; Terreno: "+String(umdtrr)+"%  		<br><a href=\"/MAIL\"\"><button>MAIL DI RIEPILOGO</button></a>  <a href=\"/INNAFFIA\"\"><button>INNAFFIA</button></a> <br>Ora Aggiornamento: "+String(hour()+2)+":"+String(minute())+":"+String(second())+"</html>");
+
+						// Break out of the while loop
+						break;
+						} else { // if you got a newline, then clear currentLine
+							currentLine = "";
+						}
+						} else if (c != '\r') {  // if you got anything else but a carriage return character,
+							currentLine += c;      // add it to the end of the currentLine
+						}
+			}
+		}
 	}
-  // Wait until the client sends some data
-	Serial.println("new client");
-	while(!client.available()){
-		delay(1);
-	}
-	// Read the first line of the request E RISPONDE
-	String request = client.readStringUntil('\r');
-	Serial.println(request);
-	client.flush();
-	if (request.indexOf("/MAIL") != -1)  {
-		oggetto="MAIL GENERATA VIA WEB";
-		mail(umdtrr,umidita,temperatura,oggetto);
-	}
-	if (request.indexOf("/INNAFFIA") != -1)  {
-		innaffia(umdtrr,umidita,temperatura);
-	}
-  // Return the response
-	client.println("HTTP/1.1 200 OK");
-	client.println("Content-Type: text/html");
-	client.println(""); //  do not forget this one
-	client.println("<!DOCTYPE HTML>");
-	client.println("<html>");
-	client.println("Temperatura Ambiente: "+String(temperatura)+"&#176;C");
-	client.println("<br>Umidit&agrave; Ambiente: "+String(umidita)+"%");
-	client.println("<br>Umidit&agrave; Terreno: "+String(umdtrr)+"%");  
-	client.println("<br><a href=\"/MAIL\"\"><button>MAIL DI RIEPILOGO</button></a>");  
-	client.println("<a href=\"/INNAFFIA\"\"><button>INNAFFIA</button></a>"); 
-  client.println("<br>Ora Aggiornamento: "+String(hour()+2)+":"+String(minute())+":"+String(second()));
-	client.println("</html>");
-	delay(1);
-	Serial.println("Client disonnected");
-	Serial.println("");
+  request = ""; //PULISCE LE RICHIESTA GIA GESTITE
+  // Close the connection
+    client.stop(); //CHIUDE I SOCKET INUTILI
+	//Serial.println("Client disonnected");
+	//Serial.println("");
+/////////////////////////////////////FINE SERVER HTTP
 }
 
 
