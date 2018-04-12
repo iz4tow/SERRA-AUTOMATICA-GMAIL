@@ -86,7 +86,7 @@ void setup() {
   String secondo;
   convertiorario(&ora,&minuto,&secondo);
   String ip = WiFi.localIP().toString();
-  messaggio="IP sessione: http://"+ip+"<br>Ora Attuale: "+ora+":"+minuto+":"+secondo);
+  messaggio="IP sessione: http://"+ip+"<br>Ora Attuale: "+ora+":"+minuto+":"+secondo;
     Gsender *gsender = Gsender::Instance();    // Getting pointer to class instance
     String subject = "INIZIO SESSIONE";
     if(gsender->Subject(subject)->Send("iz4tow@gmail.com", messaggio)){
