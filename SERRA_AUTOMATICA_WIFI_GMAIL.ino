@@ -11,6 +11,9 @@ const char* ntpServerName = "0.it.pool.ntp.org";
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 WiFiUDP udp;
+String ora;
+String minuto;
+String secondo;
 
 // Replace with your network credentials
 const char* ssid     = "THOUSAND SUNNY";
@@ -176,7 +179,7 @@ void loop(){
               Serial.println("INNAFFIA");
               innaffia(umdtrr,umidita,temperatura);
             }
-            
+            convertiorario(&ora,&minuto,&secondo);
             // Display the HTML web page
             client.println("<!DOCTYPE html>");
             client.println("<html><body>");
@@ -185,7 +188,7 @@ void loop(){
             client.println("<br>Umidit&agrave; Terreno: "+String(umdtrr)+"%");  
             client.println("<br><a href=\"/MAIL\"\"><button>MAIL DI RIEPILOGO</button></a>");  
             client.println("<a href=\"/INNAFFIA\"\"><button>INNAFFIA</button></a>"); 
-            //////////client.println("<br>Ora Aggiornamento: "+String(hour()+2)+":"+String(minute())+":"+String(second()));
+            client.println("<br><br>Ora Aggiornamento: "+ora+":"+minuto+":"+secondo);
             client.println("</body></html>");
             
             // The HTTP response ends with another blank line
@@ -215,7 +218,8 @@ void loop(){
 
 
 void mail(int umdtrr,int umidita,int temperatura,String oggetto){
-  messaggio="Umidità terreno: " +String(umdtrr)+"% <br>Umidità ambiente: "+String(umidita)+"% <br> Temperatura ambiente: "+String(temperatura) +"°C"+"<br><br>Ora Aggiornamento: "+String(hour()+2)+":"+String(minute())+":"+String(second());
+  convertiorario(&ora,&minuto,&secondo);
+  messaggio="Umidità terreno: " +String(umdtrr)+"% <br>Umidità ambiente: "+String(umidita)+"% <br> Temperatura ambiente: "+String(temperatura) +"°C"+"<br><br>Ora Aggiornamento: "+ora+":"+minuto+":"+secondo;
   Gsender *gsender = Gsender::Instance();    // Getting pointer to class instance
   String subject = oggetto;
   if(gsender->Subject(subject)->Send("iz4tow@gmail.com", messaggio)) {
@@ -237,7 +241,27 @@ void innaffia(int umdtrr,int umidita,int temperatura){
 
 
 
-
+void convertiorario(String* ora, String* minuto, String* secondo){
+    //CONVERSIONE ORARIA IN ORA ITALIANA FORMATO HH:MM:SS
+  if (hour()+2<10){
+    *ora = String("0")+String(hour()+2);
+  }else if (hour()+2>23){
+    *ora = String("0")+String ((hour()+2)-24);
+  }else{
+    *ora=hour();
+  }
+  if (minute()<10){
+    *minuto = String("0")+String(minute());
+  }else{
+    *minuto=minute();
+  }
+  if (second()<10){
+    *secondo = String("0")+String(second());
+  }
+  else{
+    *secondo=second();
+  }
+ }
 //FUNZIONI PER NTP TIME
 unsigned long sendNTPpacket(IPAddress& address){
   Serial.println("sending NTP packet...");
