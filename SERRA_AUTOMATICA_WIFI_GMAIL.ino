@@ -257,18 +257,18 @@ void convertiorario(String* ora, String* minuto, String* secondo){
   }else if (hour()+2>23){
     *ora = String("0")+String ((hour()+2)-24);
   }else{
-    *ora=hour();
+    *ora=String(hour()+2);
   }
   if (minute()<10){
     *minuto = String("0")+String(minute());
   }else{
-    *minuto=minute();
+    *minuto=String(minute());
   }
   if (second()<10){
     *secondo = String("0")+String(second());
   }
   else{
-    *secondo=second();
+    *secondo=String(second());
   }
  }
 //FUNZIONI PER NTP TIME
