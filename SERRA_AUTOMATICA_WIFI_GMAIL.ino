@@ -11,9 +11,7 @@ const char* ntpServerName = "0.it.pool.ntp.org";
 const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of the message
 byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 WiFiUDP udp;
-String ora;
-String minuto;
-String secondo;
+
 
 // Replace with your network credentials
 const char* ssid     = "THOUSAND SUNNY";
@@ -83,8 +81,12 @@ void setup() {
 
 
   //MAIL INIZIO SESSIONE
+    String ora;
+  String minuto;
+  String secondo;
+  convertiorario(&ora,&minuto,&secondo);
   String ip = WiFi.localIP().toString();
-  messaggio="IP sessione: http://"+ip+"<br>Ora Attuale: "+String(hour()+2)+":"+String(minute())+":"+String(second());
+  messaggio="IP sessione: http://"+ip+"<br>Ora Attuale: "+ora+":"+minuto+":"+secondo);
     Gsender *gsender = Gsender::Instance();    // Getting pointer to class instance
     String subject = "INIZIO SESSIONE";
     if(gsender->Subject(subject)->Send("iz4tow@gmail.com", messaggio)){
@@ -102,6 +104,10 @@ void setup() {
 
 
 void loop(){
+String ora;
+String minuto;
+String secondo;
+
 // Lettura umidità e temperatura del sensore DHT11
   umidita =dht.readHumidity();
   temperatura =dht.readTemperature();
@@ -218,6 +224,9 @@ void loop(){
 
 
 void mail(int umdtrr,int umidita,int temperatura,String oggetto){
+  String ora;
+  String minuto;
+  String secondo;
   convertiorario(&ora,&minuto,&secondo);
   messaggio="Umidità terreno: " +String(umdtrr)+"% <br>Umidità ambiente: "+String(umidita)+"% <br> Temperatura ambiente: "+String(temperatura) +"°C"+"<br><br>Ora Aggiornamento: "+ora+":"+minuto+":"+secondo;
   Gsender *gsender = Gsender::Instance();    // Getting pointer to class instance
