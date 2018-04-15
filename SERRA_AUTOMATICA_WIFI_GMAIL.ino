@@ -14,8 +14,8 @@ WiFiUDP udp;
 
 
 // Replace with your network credentials
-const char* ssid     = "THOUSAND SUNNY";
-const char* password = "kingzoro";
+const char* ssid     = "NETGEAR";
+const char* password = "";
 
 // SETTAGGI PER POSTA
 char server[] = "smtp.gmail.com";
@@ -149,7 +149,9 @@ String secondo;
   }
 
  //AGGIORNA ORA OGNI MEZZANOTTE
-  if (hour()==0 and minute()==0){ 
+  if (hour()==16 and minute()==0){ 
+    oggetto="ORA AGGIORNATA";
+    mail(umdtrr,umidita,temperatura,oggetto);
     ricevintp();
   }
 
@@ -179,6 +181,7 @@ String secondo;
             // turns the GPIOs on and off
             if (header.indexOf("/MAIL") >= 0) {
               Serial.println("MAIL VIA WEB");
+              oggetto="MAIL GENERATA VIA WEB";
               mail(umdtrr,umidita,temperatura,oggetto);
             } 
             if (header.indexOf("/INNAFFIA") >= 0) {
